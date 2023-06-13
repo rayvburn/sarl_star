@@ -286,9 +286,10 @@ class RobotAction(object):
 if __name__ == '__main__':
     begin_travel = False
     # set file dirs
-    model_dir = '/home/likeyu/sarl_ws/src/sarl_star/CrowdNav/crowd_nav/data/output/'
-    env_config_file = '/home/likeyu/sarl_ws/src/sarl_star/CrowdNav/crowd_nav/data/output/env.config'
-    policy_config_file = '/home/likeyu/sarl_ws/src/sarl_star/CrowdNav/crowd_nav/data/output/policy.config'
+    this_dirname = os.path.dirname(__file__)
+    model_dir = os.path.join(this_dirname, '../CrowdNav/crowd_nav/data/output/')
+    env_config_file = os.path.join(model_dir, 'env.config')
+    policy_config_file = os.path.join(model_dir, 'policy.config')
     if os.path.exists(os.path.join(model_dir, 'resumed_rl_model.pth')):
         model_weights = os.path.join(model_dir, 'resumed_rl_model.pth')
     else:
