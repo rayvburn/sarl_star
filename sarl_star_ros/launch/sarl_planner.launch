@@ -1,0 +1,37 @@
+<launch>
+  <!-- Define type of planner (original|star)-->
+  <arg name="type" default="original" />
+
+  <arg name="global_pose_topic" default="/amcl_pose" />
+  <arg name="odom_topic" default="/odom" />
+  <arg name="people_topic" default="/people" />
+  <arg name="global_costmap_topic" default="/move_base/global_costmap/costmap" />
+  <arg name="goal_topic" if="$(eval type == 'star')" default="/local_goal" />
+  <arg name="goal_topic" unless="$(eval type == 'star')" default="/move_base_simple/goal" />
+  <arg name="cmd_vel_topic" default="/cmd_vel_mux/input/teleop" />
+
+  <arg name="marker_topic_ns" default="" />
+
+  <!-- updates paths to Python dependencies (virtualenv created during the compilation) -->
+  <env name="PYTHONPATH" value="$(find sarl_star_ros)/../.venv/lib/python2.7/site-packages:$(find sarl_star_ros)/CrowdNav:$(find sarl_star_ros)/../Python-RVO2/:$(optenv PYTHONPATH)"/>
+
+  <!-- SARL_<type>> Planner -->
+  <node pkg="sarl_star_ros" type="sarl_$(arg type)_node.py" name="sarl_$(arg type)_node" output="screen" >
+    <!-- remap subscribed topics (some are explicitly pointed out only for clarity) -->
+    <remap from="/amcl_pose" to="$(arg global_pose_topic)"/>
+    <remap from="/odom" to="$(arg odom_topic)"/>
+    <remap from="/people" to="$(arg people_topic)"/>
+    <remap from="/move_base/global_costmap/costmap" to="$(arg global_costmap_topic)"/>
+    <!-- the one below is specific to sarl_original_node -->
+    <remap from="/move_base_simple/goal" to="$(arg goal_topic)"/>
+    <!-- the one below is specific to sarl_star_node -->
+    <remap from="/local_goal" to="$(arg goal_topic)"/>
+
+    <!-- remap published topics -->
+    <remap from="/cmd_vel_mux/input/teleop" to="$(arg cmd_vel_topic)"/>
+    <remap from="/goal_marker" to="$(arg marker_topic_ns)/goal_marker"/>
+    <remap from="/action_marker" to="$(arg marker_topic_ns)/action_marker"/>
+    <remap from="/trajectory_marker" to="$(arg marker_topic_ns)/trajectory_marker"/>
+    <remap from="/vehicle_marker" to="$(arg marker_topic_ns)/vehicle_marker"/>
+  </node>
+</launch>
