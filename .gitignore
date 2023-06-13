@@ -1,0 +1,12 @@
+# VSCode config not tracked
+.vscode
+
+# virtual environment dir
+.venv/
+
+# misc
+backup/
+
+*.egg
+*.pyc
+*.so
