@@ -1,1 +1,2 @@
 Cython==0.21.1
+cmake==3.25.2 # https://github.com/sybrenstuvel/Python-RVO2/issues/29#issuecomment-1449532234
