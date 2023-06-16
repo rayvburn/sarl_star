@@ -6,8 +6,10 @@
   <arg name="odom_topic" default="/odom" />
   <arg name="people_topic" default="/people" />
   <arg name="global_costmap_topic" default="/move_base/global_costmap/costmap" />
-  <arg name="goal_topic" if="$(eval type == 'star')" default="/local_goal" />
-  <arg name="goal_topic" unless="$(eval type == 'star')" default="/move_base_simple/goal" />
+  <!-- default goal topic names -->
+  <arg name="goal_topic_default" if="$(eval type == 'star')" default="/local_goal" />
+  <arg name="goal_topic_default" if="$(eval type == 'original')" default="/move_base_simple/goal" />
+  <arg name="goal_topic" default="$(arg goal_topic_default)" />
   <arg name="cmd_vel_topic" default="/cmd_vel_mux/input/teleop" />
 
   <arg name="marker_topic_ns" default="" />
