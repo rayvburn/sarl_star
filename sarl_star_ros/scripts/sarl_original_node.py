@@ -246,9 +246,19 @@ class RobotAction(object):
             self.ob.append(human.get_observable_state())
 
     def get_goal_on_map(self, msg):
+        transform_needed = not "map" in msg.header.frame_id
+        if transform_needed: # either "map" or "/map"
+            # must transform poses to the shared frame
+            status, transform = find_transform(source_frame=msg.header.frame_id, target_frame="map")
+            if not status:
+                rospy.logerr("Robot goal won't be updated")
+                return
+            tfmsg = transform_pose(msg, transform)
+        else:
+            tfmsg = msg
         self.Is_goal_received = True
-        self.received_gx = msg.pose.position.x
-        self.received_gy = msg.pose.position.y
+        self.received_gx = tfmsg.pose.position.x
+        self.received_gy = tfmsg.pose.position.y
 
     def get_gc(self, msg):
         if not self.Is_gc_Received:
