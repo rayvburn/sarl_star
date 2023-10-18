@@ -248,8 +248,16 @@ class RobotAction(object):
 
     def get_goal_on_map(self, msg):
         self.Is_lg_Received = True
-        listener_g.waitForTransform('/map', '/odom', rospy.Time(0), rospy.Duration(10))
-        tfmsg = listener_g.transformPose("/map", msg)
+        transform_needed = not "map" in msg.header.frame_id
+        if transform_needed: # either "map" or "/map"
+            # must transform poses to the shared frame
+            status, transform = find_transform(source_frame=msg.header.frame_id, target_frame="map")
+            if not status:
+                rospy.logerr("Robot goal won't be updated")
+                return
+            tfmsg = transform_pose(msg, transform)
+        else:
+            tfmsg = msg
         self.received_gx = tfmsg.pose.position.x
         self.received_gy = tfmsg.pose.position.y
 
@@ -416,7 +424,6 @@ if __name__ == '__main__':
         rospy.init_node('sarl_star_node', anonymous=True)
         rate = rospy.Rate(4)  # 4Hz, time_step=0.25
         robot_act = RobotAction()
-        listener_g = tf.TransformListener()
         tf_buffer = tf2_ros.Buffer(rospy.Duration(1200.0)) # tf buffer length
         tf_listener = tf2_ros.TransformListener(tf_buffer)
 
