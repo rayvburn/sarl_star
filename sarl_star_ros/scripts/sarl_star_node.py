@@ -144,7 +144,6 @@ class RobotAction(object):
         self.vehicle_marker_pub = rospy.Publisher('/vehicle_marker', Marker, queue_size=1)
 
     def update_robot_pos(self, msg):
-        self.IsAMCLReceived = True
         self.num_pos += 1
         position = msg.pose.pose.position
         orientation = msg.pose.pose.orientation
@@ -156,6 +155,7 @@ class RobotAction(object):
             rospy.loginfo("Start point is:(%s,%s)" % (self.px,self.py))
             self.getStartPoint = True
         self.visualize_trajectory(position, orientation)
+        self.IsAMCLReceived = True
 
     def robot_vel_on_map_calculator(self, msg):
         vel_linear = msg.twist.twist.linear
@@ -184,7 +184,6 @@ class RobotAction(object):
 
     def update_humans(self, msg):
         # observable state: px,py,vx,vy,radius
-        self.IsObReceived = True
         self.humans = list()
         self.ob = list()
 
@@ -245,9 +244,9 @@ class RobotAction(object):
             self.humans.append(human)
         for human in self.humans:
             self.ob.append(human.get_observable_state())
+        self.IsObReceived = True
 
     def get_goal_on_map(self, msg):
-        self.Is_lg_Received = True
         transform_needed = not "map" in msg.header.frame_id
         if transform_needed: # either "map" or "/map"
             # must transform poses to the shared frame
@@ -260,6 +259,7 @@ class RobotAction(object):
             tfmsg = msg
         self.received_gx = tfmsg.pose.position.x
         self.received_gy = tfmsg.pose.position.y
+        self.Is_lg_Received = True
 
     def get_gc(self, msg):
         if not self.Is_gc_Received:
