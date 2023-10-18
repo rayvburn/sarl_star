@@ -2,6 +2,7 @@
 # Author: Keyu Li <kyli@link.cuhk.edu.hk>
 
 from __future__ import division
+import math
 import logging
 import os
 import torch
@@ -186,9 +187,61 @@ class RobotAction(object):
         self.IsObReceived = True
         self.humans = list()
         self.ob = list()
+
+        transform_needed = not "map" in msg.header.frame_id
+        if transform_needed: # either "map" or "/map"
+            # must transform poses to the shared frame
+            status, transform = find_transform(
+                source_frame=msg.header.frame_id,
+                target_frame='map',
+                stamp=msg.header.stamp,
+                timeout=rospy.Duration(4.0)
+            )
+            if not status:
+                rospy.logerr("Could not find a TF - humans list won't be updated.")
+                return
+
         for p in msg.people:
-            # dist = np.linalg.norm(np.array([self.px,self.py])-np.array([p.position.x,p.position.y]))
-            human = Human(p.position.x, p.position.y, p.velocity.x, p.velocity.y)
+            if not transform_needed:
+                human = Human(p.position.x, p.position.y, p.velocity.x, p.velocity.y)
+            else:
+                # transform pose
+                pose_input = PoseStamped()
+                pose_input.header.frame_id = msg.header.frame_id
+                pose_input.header.stamp = msg.header.stamp
+                pose_input.pose.position = p.position
+                pose_input.pose.orientation.w = 1.0 # arbitrary as the orientation is not available here
+                pose_transformed = transform_pose(pose_input, transform)
+
+                # transform velocity to the global coordinate system (only rotation needed)
+                vel_input = PoseStamped()
+                vel_input.header.frame_id = msg.header.frame_id
+                vel_input.header.stamp = msg.header.stamp
+                quat = tf.transformations.quaternion_from_euler(0.0, 0.0, math.atan2(p.velocity.y, p.velocity.x))
+                vel_input.pose.orientation.x = quat[0]
+                vel_input.pose.orientation.y = quat[1]
+                vel_input.pose.orientation.z = quat[2]
+                vel_input.pose.orientation.w = quat[3]
+                vel_transformed = transform_pose(vel_input, transform)
+                rpy = tf.transformations.euler_from_quaternion(
+                    [vel_transformed.pose.orientation.x,
+                    vel_transformed.pose.orientation.y,
+                    vel_transformed.pose.orientation.z,
+                    vel_transformed.pose.orientation.w]
+                )
+                vel_dir = rpy[2]
+                # base vector represented as [1.0, 0.0], scaled according to the current speed
+                vvec = [math.sqrt(p.velocity.x * p.velocity.x + p.velocity.y * p.velocity.y), 0.0]
+                vel_transformed_x = (vvec[0] * math.cos(vel_dir) - vvec[1] * math.sin(vel_dir))
+                vel_transformed_y = (vvec[0] * math.sin(vel_dir) + vvec[1] * math.cos(vel_dir))
+
+                human = Human(
+                    pose_transformed.pose.position.x,
+                    pose_transformed.pose.position.y,
+                    vel_transformed_x,
+                    vel_transformed_y
+                )
+            # dist = np.linalg.norm(np.array([self.px,self.py])-np.array([human.px,human.py]))
             self.humans.append(human)
         for human in self.humans:
             self.ob.append(human.get_observable_state())
