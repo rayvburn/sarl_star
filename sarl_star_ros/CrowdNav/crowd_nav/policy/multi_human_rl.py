@@ -69,7 +69,8 @@ class MultiHumanRL(CADRL):
 
                 # abort actions which will probably cause collision with static obstacles in the costmap
                 cost = self.compute_cost(next_self_state_further)
-                if cost > 0:
+                # costs spread from -1 to 100, originally the threshold was set to 0
+                if cost > 15:
                     print("********** Abort action:", action, "cost:", cost, "that will hit the obstacles.")
                     continue
 
