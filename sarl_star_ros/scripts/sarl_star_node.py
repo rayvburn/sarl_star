@@ -10,10 +10,12 @@ from nav_msgs.msg import Odometry, OccupancyGrid
 import configparser
 import gym
 import tf
+import tf2_ros
+import tf2_geometry_msgs
 from crowd_nav.policy.policy_factory import policy_factory
 from crowd_sim.envs.utils.state import ObservableState, FullState, JointState
 import rospy
-from geometry_msgs.msg import Point, Vector3, Twist, Pose, PoseStamped, PoseWithCovarianceStamped, TwistWithCovariance
+from geometry_msgs.msg import Point, Vector3, Twist, Pose, PoseStamped, PoseWithCovarianceStamped, TransformStamped
 from std_msgs.msg import Int32, ColorRGBA
 from people_msgs.msg import Person, People
 from visualization_msgs.msg import Marker, MarkerArray
@@ -30,6 +32,28 @@ GOAL_TOLERANCE = 0.6
 
 def add(v1, v2):
     return Vector3(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z)
+
+def transform_pose(pose_stamped, transform):
+    return tf2_geometry_msgs.do_transform_pose(pose_stamped, transform)
+
+def find_transform(source_frame, target_frame="map", stamp=rospy.Time(), timeout=rospy.Duration(1.0)):
+    if source_frame == target_frame:
+        transform = TransformStamped()
+        transform.header.frame_id = source_frame
+        transform.header.stamp = rospy.Time.now()
+        transform.transform.rotation.w = 1.0 # no rotation
+        return True, transform
+    try:
+        transform = tf_buffer.lookup_transform(
+            target_frame,
+            source_frame,
+            stamp,
+            timeout
+        )
+        return True, transform
+    except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
+        rospy.logerr("Could not find a TF: " + str(e))
+        return False, TransformStamped()
 
 class Robot(object):
     def __init__(self):
@@ -134,10 +158,17 @@ class RobotAction(object):
 
     def robot_vel_on_map_calculator(self, msg):
         vel_linear = msg.twist.twist.linear
-        listener_v.waitForTransform('/map', '/base_footprint', rospy.Time(0), rospy.Duration(10))
-        trans, rot = listener_v.lookupTransform('/map', '/base_footprint', rospy.Time(0))
+        status, transform = find_transform(source_frame='base_footprint', target_frame='map')
+        if not status:
+            rospy.logerr("Could not find a TF - robot velocity won't be computed.")
+            return
         # rotate vector 'vel_linear' by quaternion 'rot'
-        q1 = rot
+        q1 = [
+            transform.transform.rotation.x,
+            transform.transform.rotation.y,
+            transform.transform.rotation.z,
+            transform.transform.rotation.w
+        ]
         q2 = list()
         q2.append(vel_linear.x)
         q2.append(vel_linear.y)
@@ -332,8 +363,9 @@ if __name__ == '__main__':
         rospy.init_node('sarl_star_node', anonymous=True)
         rate = rospy.Rate(4)  # 4Hz, time_step=0.25
         robot_act = RobotAction()
-        listener_v = tf.TransformListener()
         listener_g = tf.TransformListener()
+        tf_buffer = tf2_ros.Buffer(rospy.Duration(1200.0)) # tf buffer length
+        tf_listener = tf2_ros.TransformListener(tf_buffer)
 
         while not rospy.is_shutdown():
             if robot_act.Is_gg_Reached:
