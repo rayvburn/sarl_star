@@ -28,8 +28,8 @@ ROBOT_V_PREF = 0.5
 DISCOMFORT_DIST = 0.1
 FAKE_HUMAN_PX = -1.7
 FAKE_HUMAN_PY = 14.3
-TIME_LIMIT = 120
-GOAL_TOLERANCE = 0.5
+TIME_LIMIT = 1000
+GOAL_TOLERANCE = 0.2
 
 def add(v1, v2):
     return Vector3(v1.x + v2.x, v1.y + v2.y, v1.z + v2.z)
