@@ -45,7 +45,12 @@ class Explorer(object):
             length = 0
             while not done:
                 action = self.robot.act(ob)
-                length = length + 0.25*np.linalg.norm([action.vx,action.vy])
+                if hasattr(action, 'vx') and hasattr(action, 'vy'):
+                    length = length + 0.25*np.linalg.norm([action.vx,action.vy])
+                elif hasattr(action, 'v') and hasattr(action, 'r'):
+                    length = length + 0.25*np.linalg.norm([action.v,action.r])
+                else:
+                    raise Exception("Got action with a wrong attribute(s)")
                 ob, reward, done, info = self.env.step(action)
                 states.append(self.robot.policy.last_state)
                 actions.append(action)
