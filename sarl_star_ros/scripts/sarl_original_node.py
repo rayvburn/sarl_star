@@ -57,9 +57,10 @@ def find_transform(source_frame, target_frame="map", stamp=rospy.Time(), timeout
         return False, TransformStamped()
 
 class Robot(object):
-    def __init__(self):
-        self.v_pref = ROBOT_V_PREF
-        self.radius = ROBOT_RADIUS
+    def __init__(self, v_pref, radius, goal_tolerance):
+        self.v_pref = v_pref
+        self.radius = radius
+        self.goal_tolerance = goal_tolerance
         self.px = None
         self.py = None
         self.gx = None
@@ -87,7 +88,7 @@ class Robot(object):
         return self.gx, self.gy
 
     def reached_destination(self):
-        return np.linalg.norm(np.array(self.get_position()) - np.array(self.get_goal_position())) < GOAL_TOLERANCE
+        return np.linalg.norm(np.array(self.get_position()) - np.array(self.get_goal_position())) < self.goal_tolerance
         #      || (position - goal position) ||
 
 
@@ -416,10 +417,14 @@ if __name__ == '__main__':
     policy.set_env(env)
     policy.time_step = 0.25
     policy.gc = []
-    robot = Robot()
+
+    rospy.init_node('sarl_original_node', anonymous=True)
+    robot_v_pref = rospy.get_param('~vel_pref', ROBOT_V_PREF)
+    robot_radius = rospy.get_param('~robot_radius', ROBOT_RADIUS)
+    goal_tolerance = rospy.get_param('~goal_tolerance', GOAL_TOLERANCE)
+    robot = Robot(v_pref=robot_v_pref, radius=robot_radius, goal_tolerance=goal_tolerance)
 
     try:
-        rospy.init_node('sarl_original_node', anonymous=True)
         rate = rospy.Rate(4)  # 4 Hz, time_step=0.25
         robot_act = RobotAction()
         tf_buffer = tf2_ros.Buffer(rospy.Duration(1200.0)) # tf buffer length
