@@ -18,6 +18,7 @@ from crowd_sim.envs.utils.state import ObservableState, FullState, JointState
 import rospy
 from geometry_msgs.msg import Point, Vector3, Twist, Pose, PoseStamped, PoseWithCovarianceStamped, TransformStamped
 from std_msgs.msg import Int32, ColorRGBA
+from std_msgs.msg import Float64MultiArray, MultiArrayDimension
 from people_msgs.msg import Person, People
 from visualization_msgs.msg import Marker, MarkerArray
 
@@ -379,6 +380,24 @@ class RobotAction(object):
         self.visualize_action()
 
 
+def publish_computation_time(timestamp_start, timestamp_finish):
+    computation_time = float(timestamp_finish - timestamp_start)
+    msg = Float64MultiArray()
+    msg.data = [float(timestamp_start), float(computation_time)]
+
+    msg.layout.data_offset = 0
+    dim_stamp = MultiArrayDimension()
+    dim_stamp.label = 'stamp'
+    dim_stamp.size = 1
+    dim_stamp.stride = 1
+    msg.layout.dim.append(dim_stamp)
+    dim_ct = MultiArrayDimension()
+    dim_ct.label = 'computation_time'
+    dim_ct.size = 1
+    dim_ct.stride = 1
+    msg.layout.dim.append(dim_ct)
+    comp_time_pub.publish(msg)
+
 
 if __name__ == '__main__':
     begin_travel = False
@@ -425,6 +444,7 @@ if __name__ == '__main__':
     robot_radius = rospy.get_param('~robot_radius', ROBOT_RADIUS)
     goal_tolerance = rospy.get_param('~goal_tolerance', GOAL_TOLERANCE)
     robot = Robot(v_pref=robot_v_pref, radius=robot_radius, goal_tolerance=goal_tolerance)
+    comp_time_pub = rospy.Publisher('~computation_time', Float64MultiArray, queue_size=1)
 
     try:
         rate = rospy.Rate(4)  # 4Hz, time_step=0.25
@@ -452,7 +472,13 @@ if __name__ == '__main__':
                 robot_act.gy = robot_act.received_gy
                 robot_act.num_lg += 1
                 robot_act.visualize_goal()
+
+                # count the computation time of the next control command
+                computation_time_start = rospy.Time.now()
                 robot_act.planner()
+                computation_time_finish = rospy.Time.now()
+                publish_computation_time(computation_time_start.to_sec(), computation_time_finish.to_sec())
+
                 finish_travel_time = rospy.get_time()
                 t = finish_travel_time - begin_travel_time
                 if t > TIME_LIMIT:
