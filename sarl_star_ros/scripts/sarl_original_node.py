@@ -447,9 +447,9 @@ if __name__ == '__main__':
 
     try:
         rate = rospy.Rate(4)  # 4 Hz, time_step=0.25
-        robot_act = RobotAction()
         tf_buffer = tf2_ros.Buffer(rospy.Duration(1200.0)) # tf buffer length
         tf_listener = tf2_ros.TransformListener(tf_buffer)
+        robot_act = RobotAction()
 
         while not rospy.is_shutdown():
             if robot_act.Is_goal_reached:
